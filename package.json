@@ -1,0 +1,59 @@
+{
+  "name": "@zogjs/kit",
+  "version": "0.3.0",
+  "description": "Essential utilities plugin for Zog.js - HTTP client, storage helpers, DOM directives, event bus, and performance utilities",
+  "type": "module",
+  "main": "dist/zog-kit.umd.js",
+  "module": "dist/zog-kit.es.js",
+  "exports": {
+    ".": {
+      "import": "./dist/zog-kit.es.js",
+      "require": "./dist/zog-kit.umd.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zogjs/zog-kit.git"
+  },
+  "homepage": "https://github.com/zogjs/zog-kit#readme",
+  "bugs": {
+    "url": "https://github.com/zogjs/zog-kit/issues"
+  },
+  "author": "ZogJS Team",
+  "license": "MIT",
+  "keywords": [
+    "zogjs",
+    "zog",
+    "zog-kit",
+    "plugin",
+    "utilities",
+    "http-client",
+    "storage",
+    "event-bus",
+    "directives",
+    "performance",
+    "reactive",
+    "frontend",
+    "javascript"
+  ],
+  "peerDependencies": {
+    "zog": "^0.3.0"
+  },
+  "devDependencies": {
+    "vite": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

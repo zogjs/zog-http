@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zog-Kit Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2.5em;
+        }
+        .demo-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .demo-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        .demo-section p {
+            color: #666;
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        input, textarea {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1em;
+            width: 100%;
+            margin: 5px 0;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 5px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            min-width: 200px;
+            z-index: 1000;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .image-grid img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #4caf50;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" z-cloak>
+        <div class="container">
+            <h1>🚀 Zog-Kit Demo</h1>
+
+            <!-- 1. z-pre Demo -->
+            <div class="demo-section">
+                <h2>1. z-pre (Skip Compilation)</h2>
+                <p>This section is NOT compiled:</p>
+                <div z-pre style="padding: 10px; background: #ffe0e0; border-radius: 4px;">
+                    {{ This text is NOT compiled }} - message: {{ message }}
+                </div>
+                <p style="margin-top: 10px;">This section IS compiled: <strong>{{ message }}</strong></p>
+            </div>
+
+            <!-- 2. HTTP Client Demo -->
+            <div class="demo-section">
+                <h2>2. HTTP Client</h2>
+                <button @click="fetchUsers">Fetch Users</button>
+                <button @click="createPost">Create Post</button>
+                <div z-if="loading" style="margin-top: 10px;">
+                    <span class="loading"></span> Loading...
+                </div>
+                <div z-if="apiData && !loading" style="margin-top: 10px;">
+                    <strong>Result:</strong>
+                    <pre style="background: #f0f0f0; padding: 10px; border-radius: 4px; overflow: auto;">{{ JSON.stringify(apiData, null, 2) }}</pre>
+                </div>
+            </div>
+
+            <!-- 3. z-once Demo -->
+            <div class="demo-section">
+                <h2>3. z-once (Render Once)</h2>
+                <p>Counter: {{ counter }}</p>
+                <p z-once>This value renders only once: {{ counter }}</p>
+                <button @click="counter.value++">Increment</button>
+            </div>
+
+            <!-- 4. Storage Demo -->
+            <div class="demo-section">
+                <h2>4. Storage Helper</h2>
+                <input z-model="storedName" placeholder="Enter your name">
+                <p style="margin-top: 10px;">Stored name: <strong>{{ storedName }}</strong></p>
+                <button @click="clearStorage">Clear Storage</button>
+            </div>
+
+            <!-- 5. Debounce Demo -->
+            <div class="demo-section">
+                <h2>5. Debounce</h2>
+                <input @input.debounce.500="handleSearch" placeholder="Search (debounced 500ms)">
+                <p style="margin-top: 10px;">Search query: <strong>{{ searchQuery }}</strong></p>
+            </div>
+
+            <!-- 6. Click Outside Demo -->
+            <div class="demo-section">
+                <h2>6. Click Outside</h2>
+                <div class="dropdown">
+                    <button @click="dropdownOpen.value = !dropdownOpen.value">Toggle Menu</button>
+                    <div z-if="dropdownOpen" z-click-outside="dropdownOpen.value = false" class="dropdown-menu">
+                        <p>Option 1</p>
+                        <p>Option 2</p>
+                        <p>Option 3</p>
+                        <p style="margin-top: 10px; color: #999; font-size: 0.9em;">
+                            Click outside to close
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. Focus Management Demo -->
+            <div class="demo-section">
+                <h2>7. Focus Management</h2>
+                <button @click="showInput.value = !showInput.value">Toggle Input</button>
+                <!-- <input z-if="showInput" z-autofocus placeholder="Auto-focused"> -->
+
+                <div z-if="showInput">
+                    <input  z-autofocus placeholder="Auto-focused">
+                </div>
+            </div>
+
+            <!-- 8. Clipboard Demo -->
+            <div class="demo-section">
+                <h2>8. Clipboard</h2>
+                <input z-model="textToCopy" placeholder="Text to copy">
+                <button z-copy="textToCopy" @copied="showNotification">Copy to Clipboard</button>
+            </div>
+
+            <!-- 9. Lazy Loading Demo -->
+            <div class="demo-section">
+                <h2>9. Lazy Loading</h2>
+                <div class="image-grid">
+                    <img z-for="(img, i) in images" :key="i" 
+                         z-lazy="img" 
+                         alt="Lazy loaded image">
+                </div>
+            </div>
+
+            <!-- 10. Event Bus Demo -->
+            <div class="demo-section">
+                <h2>10. Event Bus</h2>
+                <button @click="emitEvent">Emit Event</button>
+                <p style="margin-top: 10px;">Events received: <strong>{{ eventCount }}</strong></p>
+            </div>
+
+            <!-- Notification -->
+            <div z-if="notification" class="notification">
+                {{ notification }}
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createApp, ref } from './zog.js';
+        import ZogKit from './zog-kit.js';
+
+        const kit = ZogKit;
+
+        const app = createApp(() => {
+            const message = ref('Hello Zog-Kit! 🎉');
+            const counter = ref(0);
+            const loading = ref(false);
+            const apiData = ref(null);
+            const searchQuery = ref('');
+            const dropdownOpen = ref(false);
+            const showInput = ref(false);
+            const textToCopy = ref('This text will be copied!');
+            const notification = ref('');
+            const eventCount = ref(0);
+
+            const images = ref([
+                'https://picsum.photos/200/150?random=1',
+                'https://picsum.photos/200/150?random=2',
+                'https://picsum.photos/200/150?random=3',
+                'https://picsum.photos/200/150?random=4',
+                'https://picsum.photos/200/150?random=5',
+                'https://picsum.photos/200/150?random=6'
+            ]);
+
+            const fetchUsers = async () => {
+                loading.value = true;
+                try {
+                    const result = await pluginAPI.$http.get('/users?_limit=3');
+                    apiData.value = result.data;
+                } catch (err) {
+                    console.error('Error fetching users:', err);
+                    apiData.value = { error: err.message };
+                } finally {
+                    loading.value = false;
+                }
+            };
+
+            const createPost = async () => {
+                loading.value = true;
+                try {
+                    const result = await pluginAPI.$http.post('/posts', {
+                        title: 'Test Post',
+                        body: 'This is a test post',
+                        userId: 1
+                    });
+                    apiData.value = result.data;
+                } catch (err) {
+                    console.error('Error creating post:', err);
+                    apiData.value = { error: err.message };
+                } finally {
+                    loading.value = false;
+                }
+            };
+
+            const clearStorage = () => {
+                pluginAPI.$storage.clear();
+                alert('Storage cleared!');
+            };
+
+            const handleSearch = (e) => {
+                searchQuery.value = e.target.value;
+            };
+
+            const showNotification = () => {
+                notification.value = '✓ Copied successfully!';
+                setTimeout(() => notification.value = '', 3000);
+            };
+
+            const emitEvent = () => {
+                pluginAPI.$bus.emit('test-event', { time: new Date().toLocaleTimeString() });
+                eventCount.value++;
+            };
+
+            const storedName = pluginAPI.$storage.reactive('userName', 'Guest');
+
+            return {
+                message,
+                counter,
+                loading,
+                apiData,
+                searchQuery,
+                dropdownOpen,
+                showInput,
+                textToCopy,
+                notification,
+                eventCount,
+                images,
+                fetchUsers,
+                createPost,
+                clearStorage,
+                handleSearch,
+                showNotification,
+                emitEvent,
+                storedName
+            };
+        });
+
+        const pluginAPI = app.use(kit, {
+            baseURL: 'https://jsonplaceholder.typicode.com',
+            devtools: false,
+            debug: true, // Enable ZogKit debugging
+            storagePrefix: 'demo_'
+        });
+
+        pluginAPI.$bus.on('test-event', (data) => {
+            console.log('Event received:', data);
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>
