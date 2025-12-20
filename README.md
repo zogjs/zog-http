@@ -2,7 +2,7 @@
 
 **Essential utilities plugin for Zog.js**
 
-[![Version](https://img.shields.io/badge/version-1.0.4-blue.svg)](https://github.com/zogjs/kit)
+[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/zogjs/kit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 ZogKit is a comprehensive utilities plugin that extends Zog.js with powerful features including HTTP client, storage helpers, DOM directives, event bus, and performance utilities.
@@ -16,28 +16,100 @@ npm install @zogjs/kit
 ## 🚀 Quick Start
 
 ```javascript
-import Zog from 'zog';
-import ZogKit from '@zogjs/kit';
+import { createApp, ref } from './zog.js';
+import ZogKit from './zog-kit.js';
 
-const app = Zog.createApp({
-  // your app config
-});
-
-app.use(ZogKit, {
+const kit = createApp(() => {
+  const message = ref('Hello ZogKit!');
+  
+  return { message };
+}).use(ZogKit, {
   baseURL: 'https://api.example.com',
   timeout: 30000,
   storagePrefix: 'myapp_'
 });
 
+kit.mount('#app');
+```
+
+## ⚠️ Important: How ZogKit Works
+
+### Plugin API Access
+
+When you call `.use(ZogKit)`, it returns an object containing all plugin APIs:
+
+```javascript
+const kit = app.use(ZogKit);
+// kit now contains: { $http, $storage, $session, $clipboard, $bus, utils }
+```
+
+**Two common patterns:**
+
+**Pattern 1: Chain everything**
+```javascript
+const kit = createApp(() => {
+  async function loadData() {
+    const { data } = await kit.$http.get('/api/data');
+    return data;
+  }
+  return { loadData };
+}).use(ZogKit, { baseURL: 'https://api.example.com' });
+
+kit.mount('#app');
+```
+
+**Pattern 2: Separate declarations**
+```javascript
+const app = createApp(() => {
+  async function loadData() {
+    const { data } = await kit.$http.get('/api/data');
+    return data;
+  }
+  return { loadData };
+});
+
+const kit = app.use(ZogKit, { baseURL: 'https://api.example.com' });
+
 app.mount('#app');
 ```
 
+### Understanding Refs in Templates vs JavaScript
+
+**In templates (auto-unwrapped):**
+```html
+<p>{{ count }}</p>  <!-- ✅ No .value needed -->
+<button :disabled="isLoading">Submit</button>  <!-- ✅ Auto-unwrapped -->
+```
+
+**In JavaScript (use .value):**
+```javascript
+count.value++;  // ✅ Must use .value
+if (isLoading.value) { }  // ✅ Must use .value
+```
+
+**In z-for loops (items are ALWAYS refs):**
+```html
+<div z-for="user in users">
+  <p>{{ user.name }}</p>  <!-- ✅ Auto-unwrapped in template -->
+  <button @click="selectUser(user)">Select</button>
+</div>
+```
+
+```javascript
+function selectUser(user) {
+  // user is a ref from z-for, must use .value
+  console.log(user.value.name);  // ✅
+}
+```
+
+---
+
 ## 📚 Features
 
-### HTTP Client (`$http`)
+### HTTP Client (`kit.$http`)
 A powerful HTTP client with automatic JSON handling, timeout support, and request abortion.
 
-### Storage Helpers (`$storage`, `$session`)
+### Storage Helpers (`kit.$storage`, `kit.$session`)
 Enhanced localStorage and sessionStorage with TTL support and reactive state.
 
 ### DOM Directives
@@ -49,14 +121,14 @@ Enhanced localStorage and sessionStorage with TTL support and reactive state.
 - `z-lazy` - Lazy load images
 - `z-copy` - Copy to clipboard
 
-### Event Bus (`$bus`)
+### Event Bus (`kit.$bus`)
 Global event system for component communication.
 
-### Performance Utilities
+### Performance Utilities (`kit.utils`)
 - `debounce` - Debounce function calls
 - `throttle` - Throttle function calls
 
-### Clipboard Helper (`$clipboard`)
+### Clipboard Helper (`kit.$clipboard`)
 Easy-to-use clipboard operations with fallback support.
 
 ---
@@ -66,7 +138,7 @@ Easy-to-use clipboard operations with fallback support.
 ### Configuration Options
 
 ```javascript
-app.use(ZogKit, {
+const kit = app.use(ZogKit, {
   // HTTP Client Options
   baseURL: '',           // Base URL for HTTP requests
   timeout: 30000,        // Request timeout in milliseconds
@@ -82,48 +154,78 @@ app.use(ZogKit, {
 
 ## 🌐 HTTP Client
 
-The `$http` service provides a clean API for making HTTP requests.
+The `kit.$http` service provides a clean API for making HTTP requests.
 
 ### Basic Usage
 
 ```javascript
-const app = Zog.createApp({
-  async mounted() {
-    // GET request
-    const { data } = await this.$http.get('/users');
+import { createApp, ref, watchEffect } from './zog.js';
+import ZogKit from './zog-kit.js';
+
+const kit = createApp(() => {
+  const users = ref([]);
+  const loading = ref(false);
+  const error = ref(null);
+  
+  async function loadUsers() {
+    loading.value = true;
+    error.value = null;
     
-    // POST request
-    const response = await this.$http.post('/users', {
-      name: 'John Doe',
-      email: 'john@example.com'
-    });
-    
-    // PUT request
-    await this.$http.put('/users/1', { name: 'Jane Doe' });
-    
-    // DELETE request
-    await this.$http.delete('/users/1');
+    try {
+      // GET request
+      const { data } = await kit.$http.get('/users');
+      users.value = data;
+    } catch (err) {
+      error.value = err.message;
+    } finally {
+      loading.value = false;
+    }
   }
-});
+  
+  async function createUser(userData) {
+    // POST request
+    const { data } = await kit.$http.post('/users', userData);
+    users.value.push(data);
+  }
+  
+  async function updateUser(id, userData) {
+    // PUT request
+    await kit.$http.put(`/users/${id}`, userData);
+  }
+  
+  async function deleteUser(id) {
+    // DELETE request
+    await kit.$http.delete(`/users/${id}`);
+  }
+  
+  // Load users on mount
+  watchEffect(() => {
+    loadUsers();
+  });
+  
+  return { users, loading, error, createUser, updateUser, deleteUser };
+}).use(ZogKit, { baseURL: 'https://api.example.com' });
+
+kit.mount('#app');
 ```
 
 ### Advanced Usage
 
 ```javascript
 // Custom headers
-const { data } = await this.$http.get('/api/data', {
+const { data } = await kit.$http.get('/api/data', {
   headers: {
     'Authorization': 'Bearer token123'
   }
 });
 
 // Custom timeout
-const response = await this.$http.post('/api/upload', formData, {
+const response = await kit.$http.post('/api/upload', formData, {
   timeout: 60000
 });
 
 // Full response access
-const { data, response, status } = await this.$http.get('/users');
+const { data, response, status } = await kit.$http.get('/users');
 console.log(status); // 200
 console.log(response.headers);
 ```
@@ -131,14 +233,20 @@ console.log(response.headers);
 ### FormData Support
 
 ```javascript
-const formData = new FormData();
-formData.append('file', fileInput.files[0]);
-
-await this.$http.post('/upload', formData, {
-  headers: {
-    'Content-Type': 'multipart/form-data'
+const kit = createApp(() => {
+  async function uploadFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    await kit.$http.post('/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
   }
-});
+  
+  return { uploadFile };
+}).use(ZogKit);
 ```
 
 ---
@@ -147,43 +255,50 @@ await this.$http.post('/upload', formData, {
 
 Enhanced storage with TTL support and reactive state.
 
-### LocalStorage (`$storage`)
+### LocalStorage (`kit.$storage`)
 
 ```javascript
-const app = Zog.createApp({
-  mounted() {
-    // Set value
-    this.$storage.set('user', { name: 'John', age: 30 });
-    
-    // Get value
-    const user = this.$storage.get('user');
-    
-    // With default value
-    const theme = this.$storage.get('theme', 'light');
-    
-    // Set with TTL (5 minutes)
-    this.$storage.set('token', 'abc123', 5 * 60 * 1000);
-    
-    // Check if exists
-    if (this.$storage.has('token')) {
-      console.log('Token exists');
-    }
-    
-    // Remove item
-    this.$storage.remove('token');
-    
-    // Clear all prefixed items
-    this.$storage.clear();
+import { createApp } from './zog.js';
+import ZogKit from './zog-kit.js';
+
+const kit = createApp(() => {
+  // Set value
+  kit.$storage.set('user', { name: 'John', age: 30 });
+  
+  // Get value
+  const user = kit.$storage.get('user');
+  
+  // With default value
+  const theme = kit.$storage.get('theme', 'light');
+  
+  // Set with TTL (5 minutes)
+  kit.$storage.set('token', 'abc123', 5 * 60 * 1000);
+  
+  // Check if exists
+  if (kit.$storage.has('token')) {
+    console.log('Token exists');
   }
-});
+  
+  // Remove item
+  function logout() {
+    kit.$storage.remove('token');
+  }
+  
+  // Clear all prefixed items
+  function clearAll() {
+    kit.$storage.clear();
+  }
+  
+  return { logout, clearAll };
+}).use(ZogKit, { storagePrefix: 'myapp_' });
 ```
 
-### SessionStorage (`$session`)
+### SessionStorage (`kit.$session`)
 
 ```javascript
 // Same API as $storage
-this.$session.set('tempData', { foo: 'bar' });
-const data = this.$session.get('tempData');
+kit.$session.set('tempData', { foo: 'bar' });
+const data = kit.$session.get('tempData');
 ```
 
 ### Reactive Storage
@@ -191,25 +306,28 @@ const data = this.$session.get('tempData');
 Create reactive state that automatically syncs with storage:
 
 ```javascript
-const app = Zog.createApp({
-  setup() {
-    // Reactive localStorage
-    const theme = this.$storage.reactive('theme', 'light');
-    
-    // Changes automatically saved
-    theme.value = 'dark'; // Saved to localStorage
-    
-    return { theme };
+import { createApp } from './zog.js';
+import ZogKit from './zog-kit.js';
+
+const kit = createApp(() => {
+  // Reactive localStorage
+  const theme = kit.$storage.reactive('theme', 'light');
+  
+  function toggleTheme() {
+    // Changes automatically saved to localStorage
+    theme.value = theme.value === 'light' ? 'dark' : 'light';
   }
-});
+  
+  return { theme, toggleTheme };
+}).use(ZogKit);
+
+kit.mount('#app');
 ```
 
 ```html
-<div>
+<div id="app">
   <p>Current theme: {{ theme }}</p>
-  <button @click="theme = theme === 'light' ? 'dark' : 'light'">
-    Toggle Theme
-  </button>
+  <button @click="toggleTheme">Toggle Theme</button>
 </div>
 ```
 
@@ -269,16 +387,17 @@ Automatically focus an element when it appears:
 Detect clicks outside an element (perfect for dropdowns, modals):
 
 ```javascript
-const app = Zog.createApp({
-  data: {
-    isOpen: false
-  },
-  methods: {
-    close() {
-      this.isOpen = false;
-    }
+import { createApp, ref } from './zog.js';
+
+const kit = createApp(() => {
+  const isOpen = ref(false);
+  
+  function close() {
+    isOpen.value = false;
   }
-});
+  
+  return { isOpen, close };
+}).use(ZogKit);
 ```
 
 ```html
@@ -310,25 +429,64 @@ Lazy load images when they enter the viewport:
 Copy text to clipboard on click:
 
 ```javascript
-const app = Zog.createApp({
-  data: {
-    code: 'npm install @zogjs/kit'
+import { createApp, ref } from './zog.js';
+
+const kit = createApp(() => {
+  const code = ref('npm install @zogjs/kit');
+  
+  function showNotification() {
+    console.log('Copied!');
   }
-});
+  
+  return { code, showNotification };
+}).use(ZogKit);
 ```
 
 ```html
 <button z-copy="code">Copy Code</button>
 
 <!-- Listen to copied event -->
-<button z-copy="code" @copied="showNotification">
-  Copy
-</button>
+<button z-copy="code" @copied="showNotification">Copy</button>
 ```
 
 ---
 
 ## 🎭 Event Modifiers
+
+### Important: Event Modifier Support
+
+**ZogKit adds custom modifiers** (`.debounce`, `.throttle`) to Zog.js:
+
+```html
+<!-- ✅ These work (added by ZogKit): -->
+<input @input.debounce.500="search">
+<div @scroll.throttle.1000="handleScroll">
+
+<!-- ❌ Standard modifiers DON'T work (Zog.js limitation): -->
+<form @submit.prevent="onSubmit">  <!-- .prevent not supported -->
+<input @keyup.enter="search">      <!-- .enter not supported -->
+<button @click.stop="onClick">     <!-- .stop not supported -->
+```
+
+**Workaround for standard modifiers:**
+
+```javascript
+const kit = createApp(() => {
+  function onSubmit(e) {
+    e.preventDefault();  // ✅ Do it manually
+    e.stopPropagation(); // ✅ Do it manually
+    // Your logic here
+  }
+  
+  function onKeyup(e) {
+    if (e.key === 'Enter') {  // ✅ Check manually
+      search();
+    }
+  }
+  
+  return { onSubmit, onKeyup };
+}).use(ZogKit);
+```
 
 ### Debounce
 
@@ -342,6 +500,20 @@ Delay function execution until after wait time has elapsed:
 <input @keyup.debounce="handleInput">
 ```
 
+**Important:** The handler must exist in scope:
+
+```javascript
+const kit = createApp(() => {
+  const query = ref('');
+  
+  function search() {
+    console.log('Searching for:', query.value);
+  }
+  
+  return { query, search };
+}).use(ZogKit);
+```
+
 **Use case:** Search inputs, form validation
 
 ### Throttle
@@ -350,9 +522,7 @@ Execute function at most once per specified time period:
 
 ```html
 <!-- Execute at most once per 1000ms -->
-<div @scroll.throttle.1000="handleScroll">
-  Scrollable content
-</div>
+<div @scroll.throttle.1000="handleScroll">Scrollable content</div>
 
 <!-- Default limit is 300ms -->
 <button @click.throttle="saveData">Save</button>
@@ -369,68 +539,105 @@ Global event system for component communication.
 ### Basic Usage
 
 ```javascript
-// Component A - Emit event
-this.$bus.emit('user-login', { userId: 123 });
-
-// Component B - Listen for event
-this.$bus.on('user-login', (data) => {
-  console.log('User logged in:', data.userId);
-});
+const kit = createApp(() => {
+  function login(userId) {
+    // Emit event
+    kit.$bus.emit('user-login', { userId });
+  }
+  
+  // Listen for event
+  kit.$bus.on('user-login', (data) => {
+    console.log('User logged in:', data.userId);
+  });
+  
+  return { login };
+}).use(ZogKit);
 ```
 
 ### Complete API
 
 ```javascript
-const app = Zog.createApp({
-  mounted() {
-    // Listen to event
-    const unsubscribe = this.$bus.on('message', (data) => {
-      console.log('Received:', data);
-    });
-    
-    // Remove listener
+import { createApp, watchEffect } from './zog.js';
+import ZogKit from './zog-kit.js';
+
+const kit = createApp(() => {
+  // Listen to event
+  const unsubscribe = kit.$bus.on('message', (data) => {
+    console.log('Received:', data);
+  });
+  
+  // Remove listener
+  function cleanup() {
     unsubscribe();
     // or
-    this.$bus.off('message', handler);
-    
-    // Listen once
-    this.$bus.once('init', () => {
-      console.log('Initialized once');
-    });
-    
-    // Emit event
-    this.$bus.emit('message', { text: 'Hello' });
-    
-    // Clear specific event listeners
-    this.$bus.clear('message');
-    
-    // Clear all listeners
-    this.$bus.clear();
+    kit.$bus.off('message', handler);
   }
-});
+  
+  // Listen once
+  kit.$bus.once('init', () => {
+    console.log('Initialized once');
+  });
+  
+  // Emit event
+  function sendMessage(text) {
+    kit.$bus.emit('message', { text });
+  }
+  
+  // Clear specific event listeners
+  function clearMessages() {
+    kit.$bus.clear('message');
+  }
+  
+  // Clear all listeners
+  function clearAll() {
+    kit.$bus.clear();
+  }
+  
+  return { sendMessage, cleanup, clearMessages, clearAll };
+}).use(ZogKit);
 ```
 
 ### Real-world Example
 
 ```javascript
-// Notification system
-const NotificationManager = Zog.createApp({
-  data: {
-    notifications: []
-  },
-  mounted() {
-    this.$bus.on('notify', (message) => {
-      this.notifications.push(message);
-      setTimeout(() => this.notifications.shift(), 3000);
-    });
-  }
-});
+import { createApp, ref, reactive } from './zog.js';
+import ZogKit from './zog-kit.js';
 
-// Somewhere in your app
-this.$bus.emit('notify', { 
-  type: 'success', 
-  text: 'Data saved successfully!' 
-});
+// Notification Manager
+const notificationApp = createApp(() => {
+  const notifications = reactive([]);
+  
+  notificationKit.$bus.on('notify', (message) => {
+    notifications.push(message);
+    setTimeout(() => notifications.shift(), 3000);
+  });
+  
+  return { notifications };
+}).use(ZogKit);
+
+const notificationKit = notificationApp;
+
+// User Manager that emits notifications
+const userApp = createApp(() => {
+  async function saveUser(userData) {
+    try {
+      await userKit.$http.post('/users', userData);
+      userKit.$bus.emit('notify', { 
+        type: 'success', 
+        text: 'User saved successfully!' 
+      });
+    } catch (error) {
+      userKit.$bus.emit('notify', { 
+        type: 'error', 
+        text: 'Failed to save user' 
+      });
+    }
+  }
+  
+  return { saveUser };
+}).use(ZogKit);
+
+const userKit = userApp;
 ```
 
 ---
@@ -440,15 +647,21 @@ this.$bus.emit('notify', {
 Copy text to clipboard with automatic fallback.
 
 ```javascript
-const app = Zog.createApp({
-  async copyToClipboard() {
-    const success = await this.$clipboard.copy('Text to copy');
+const kit = createApp(() => {
+  const message = ref('');
+  
+  async function copyToClipboard(text) {
+    const success = await kit.$clipboard.copy(text);
     
     if (success) {
-      console.log('Copied!');
+      message.value = 'Copied!';
+    } else {
+      message.value = 'Copy failed';
     }
   }
-});
+  
+  return { message, copyToClipboard };
+}).use(ZogKit);
 ```
 
 **Features:**
@@ -463,27 +676,43 @@ const app = Zog.createApp({
 ### Debounce Function
 
 ```javascript
-const app = Zog.createApp({
-  methods: {
-    search: this.utils.debounce(function(query) {
-      // API call
-      this.$http.get('/search?q=' + query);
-    }, 500)
-  }
-});
+import { createApp, ref } from './zog.js';
+import ZogKit from './zog-kit.js';
+
+const kit = createApp(() => {
+  const query = ref('');
+  
+  // Create debounced function
+  const search = kit.utils.debounce(function() {
+    // API call
+    kit.$http.get('/search?q=' + query.value);
+  }, 500);
+  
+  return { query, search };
+}).use(ZogKit);
 ```
 
 ### Throttle Function
 
 ```javascript
-const app = Zog.createApp({
-  methods: {
-    handleScroll: this.utils.throttle(function() {
-      // Heavy computation
-      this.updateScrollPosition();
-    }, 100)
-  }
-});
+import { createApp, ref, watchEffect } from './zog.js';
+import ZogKit from './zog-kit.js';
+
+const kit = createApp(() => {
+  const scrollPosition = ref(0);
+  
+  const handleScroll = kit.utils.throttle(function() {
+    scrollPosition.value = window.scrollY;
+  }, 100);
+  
+  // Add scroll listener
+  watchEffect(() => {
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  });
+  
+  return { scrollPosition };
+}).use(ZogKit);
 ```
 
 ---
@@ -493,72 +722,92 @@ const app = Zog.createApp({
 Here's a comprehensive example using multiple ZogKit features:
 
 ```javascript
-import Zog from 'zog';
-import ZogKit from '@zogjs/kit';
+import { createApp, ref, reactive, watchEffect } from './zog.js';
+import ZogKit from './zog-kit.js';
 
-const app = Zog.createApp({
-  data: {
-    users: [],
-    loading: false,
-    searchQuery: '',
-    isDropdownOpen: false,
-    selectedUser: null
-  },
+const kit = createApp(() => {
+  const users = ref([]);
+  const loading = ref(false);
+  const searchQuery = ref('');
+  const isDropdownOpen = ref(false);
+  const selectedUser = ref(null);
   
-  async mounted() {
-    // Load users from API
-    await this.loadUsers();
-    
-    // Listen for global events
-    this.$bus.on('user-updated', this.loadUsers);
-    
-    // Load saved preferences
-    this.searchQuery = this.$storage.get('lastSearch', '');
-  },
+  // Load users on mount
+  watchEffect(() => {
+    loadUsers();
+  });
   
-  methods: {
-    async loadUsers() {
-      this.loading = true;
-      try {
-        const { data } = await this.$http.get('/api/users');
-        this.users = data;
-      } catch (error) {
-        this.$bus.emit('notify', { 
-          type: 'error', 
-          text: 'Failed to load users' 
-        });
-      } finally {
-        this.loading = false;
-      }
-    },
+  // Listen for global events
+  watchEffect(() => {
+    const cleanup = kit.$bus.on('user-updated', loadUsers);
+    return cleanup; // Cleanup on unmount
+  });
+  
+  // Load saved preferences
+  const lastSearch = kit.$storage.get('lastSearch', '');
+  searchQuery.value = lastSearch;
+  
+  async function loadUsers() {
+    loading.value = true;
+    try {
+      const { data } = await kit.$http.get('/api/users');
+      users.value = data;
+    } catch (error) {
+      kit.$bus.emit('notify', { 
+        type: 'error', 
+        text: 'Failed to load users' 
+      });
+    } finally {
+      loading.value = false;
+    }
+  }
+  
+  // Debounced search
+  const search = kit.utils.debounce(async function(query) {
+    kit.$storage.set('lastSearch', query);
+    try {
+      const { data } = await kit.$http.get(`/api/search?q=${query}`);
+      users.value = data;
+    } catch (error) {
+      console.error('Search failed:', error);
+    }
+  }, 500);
+  
+  function closeDropdown() {
+    isDropdownOpen.value = false;
+  }
+  
+  async function copyUserId(user) {
+    // user is a ref from z-for, so use .value
+    const id = user.value.id;
+    const success = await kit.$clipboard.copy(id);
     
-    search: this.utils.debounce(async function(query) {
-      this.$storage.set('lastSearch', query);
-      const { data } = await this.$http.get(`/api/search?q=${query}`);
-      this.users = data;
-    }, 500),
-    
-    closeDropdown() {
-      this.isDropdownOpen = false;
-    },
-    
-    async copyUserId(id) {
-      await this.$clipboard.copy(id);
-      this.$bus.emit('notify', { 
+    if (success) {
+      kit.$bus.emit('notify', { 
         type: 'success', 
         text: 'User ID copied!' 
       });
     }
   }
-});
-
-app.use(ZogKit, {
+  
+  return { 
+    users, 
+    loading, 
+    searchQuery, 
+    isDropdownOpen, 
+    selectedUser,
+    loadUsers,
+    search,
+    closeDropdown,
+    copyUserId
+  };
+}).use(ZogKit, {
   baseURL: 'https://api.example.com',
   timeout: 30000,
   storagePrefix: 'myapp_'
 });
 
-app.mount('#app');
+kit.mount('#app');
 ```
 
 ```html
@@ -566,7 +815,8 @@ app.mount('#app');
   <!-- Search Input with Debounce -->
   <input 
     z-autofocus
-    @input.debounce.500="search($event.target.value)"
+    z-model="searchQuery"
+    @input="search(searchQuery)"
     type="text" 
     placeholder="Search users..."
   >
@@ -586,18 +836,14 @@ app.mount('#app');
         <p>{{ user.email }}</p>
       </div>
       
-      <!-- Copy User ID -->
-      <button z-copy="user.id" @copied="copyUserId(user.id)">
-        Copy ID
-      </button>
+      <!-- Copy User ID - user is a ref from z-for -->
+      <button @click="copyUserId(user)">Copy ID</button>
     </div>
   </div>
   
   <!-- Dropdown with Click Outside -->
   <div z-click-outside="closeDropdown" class="dropdown">
-    <button @click="isDropdownOpen = !isDropdownOpen">
-      Options
-    </button>
+    <button @click="isDropdownOpen = !isDropdownOpen">Options</button>
     <ul z-show="isDropdownOpen">
       <li>Option 1</li>
       <li>Option 2</li>
@@ -611,20 +857,22 @@ app.mount('#app');
 ## 🎨 Best Practices
 
 ### 1. Use z-once for Static Content
+
 ```html
-<!-- Good: Static user profile -->
+<!-- ✅ Good: Static user profile -->
 <div z-once>
   <h1>{{ user.name }}</h1>
   <p>{{ user.bio }}</p>
 </div>
 
-<!-- Bad: Dynamic counter -->
+<!-- ❌ Bad: Dynamic counter -->
 <div z-once>
   <p>Count: {{ count }}</p> <!-- Won't update! -->
 </div>
 ```
 
 ### 2. Combine z-cloak with Loading States
+
 ```html
 <div z-cloak>
   <div z-if="loading">Loading...</div>
@@ -632,66 +880,128 @@ app.mount('#app');
 </div>
 ```
 
-### 3. Use Appropriate Debounce/Throttle Delays
+### 3. Use Method Handlers Instead of Inline Expressions
+
+```html
+<!-- ❌ Bad: Inline expression with ref -->
+<button @click="count.value++">Increment</button>
+
+<!-- ✅ Good: Method handler -->
+<button @click="increment">Increment</button>
+```
+
+```javascript
+function increment() {
+  count.value++;
+}
+```
+
+### 4. Handle z-for Items Correctly
+
+```javascript
+// z-for ALWAYS wraps items in ref()
+function selectUser(user) {
+  // user is a ref from z-for
+  console.log(user.value.name);  // ✅ Use .value
+  selectedUser.value = user.value;
+}
+```
+
+### 5. Use Appropriate Debounce/Throttle Delays
+
 ```html
 <!-- Search: 300-500ms -->
 <input @input.debounce.500="search">
 
 <!-- Scroll: 100-200ms -->
 <div @scroll.throttle.100="onScroll">
-
-<!-- Resize: 250-500ms -->
-<div @resize.throttle.250="onResize">
 ```
 
-### 4. Clean Up Event Listeners
+### 6. Clean Up Event Listeners
+
 ```javascript
-mounted() {
-  const unsubscribe = this.$bus.on('event', handler);
+import { createApp, watchEffect } from './zog.js';
+
+const kit = createApp(() => {
+  // Setup listener with cleanup
+  watchEffect(() => {
+    const unsubscribe = kit.$bus.on('event', handler);
+    return unsubscribe; // Called on unmount
+  });
   
-  // Clean up when component unmounts
-  this.cleanup = unsubscribe;
-},
-unmounted() {
-  this.cleanup?.();
-}
+  return { };
+}).use(ZogKit);
 ```
 
-### 5. Use Storage with TTL for Sensitive Data
+### 7. Use Storage with TTL for Sensitive Data
+
 ```javascript
 // Token expires in 1 hour
-this.$storage.set('authToken', token, 60 * 60 * 1000);
+kit.$storage.set('authToken', token, 60 * 60 * 1000);
 ```
 
 ---
 
-## 🐛 Troubleshooting
+## 🛠 Troubleshooting
 
 ### HTTP Requests Not Working
+
 - Check if `baseURL` is configured correctly
 - Verify CORS headers on your API
 - Check browser console for errors
+- Ensure you're using `kit.$http`, not `this.$http`
 
 ### z-click-outside Not Triggering
+
 - Ensure the element is in the DOM
 - Check if click event is bubbling properly
-- Verify the expression/function exists in scope
+- Verify the function exists in the returned scope object
 
 ### Storage Not Persisting
+
 - Check if localStorage is available
 - Verify storage quota isn't exceeded
 - Check browser privacy settings
+- Ensure storagePrefix is set correctly
 
 ### z-autofocus Not Working
+
 - Ensure element is focusable (input, textarea, button, etc.)
 - Check if element is visible (z-if/z-show)
 - Verify no conflicting autofocus attributes
+
+### Refs Not Working in Templates
+
+```html
+<!-- ❌ Wrong -->
+<p>{{ count.value }}</p>
+
+<!-- ✅ Correct -->
+<p>{{ count }}</p>
+```
+
+### Event Handlers Not Finding Functions
+
+```javascript
+// ❌ Wrong - function not returned
+const kit = createApp(() => {
+  function myHandler() { }
+  return { }; // myHandler not exposed!
+}).use(ZogKit);
+
+// ✅ Correct - function returned in scope
+const kit = createApp(() => {
+  function myHandler() { }
+  return { myHandler }; // Now accessible in template
+}).use(ZogKit);
+```
 
 ---
 
 ## 📄 API Reference
 
-### $http
+### kit.$http
+
 | Method | Parameters | Returns | Description |
 |--------|-----------|---------|-------------|
 | `get(url, options)` | url: string, options: object | Promise | GET request |
@@ -699,7 +1009,8 @@ this.$storage.set('authToken', token, 60 * 60 * 1000);
 | `put(url, body, options)` | url: string, body: any, options: object | Promise | PUT request |
 | `delete(url, options)` | url: string, options: object | Promise | DELETE request |
 
-### $storage / $session
+### kit.$storage / kit.$session
+
 | Method | Parameters | Returns | Description |
 |--------|-----------|---------|-------------|
 | `set(key, value, ttl)` | key: string, value: any, ttl: number | boolean | Store value |
@@ -709,21 +1020,25 @@ this.$storage.set('authToken', token, 60 * 60 * 1000);
 | `has(key)` | key: string | boolean | Check if exists |
 | `reactive(key, defaultValue, ttl)` | key: string, defaultValue: any, ttl: number | Ref | Reactive storage |
 
-### $clipboard
+### kit.$clipboard
+
 | Method | Parameters | Returns | Description |
 |--------|-----------|---------|-------------|
 | `copy(text)` | text: string | Promise\<boolean\> | Copy to clipboard |
 
-### $bus
+### kit.$bus
+
 | Method | Parameters | Returns | Description |
 |--------|-----------|---------|-------------|
-| `on(event, handler)` | event: string, handler: function | function | Listen to event |
+| `on(event, handler)` | event: string, handler: function | function | Listen to event (returns unsubscribe) |
 | `off(event, handler)` | event: string, handler: function | void | Remove listener |
 | `emit(event, data)` | event: string, data: any | void | Emit event |
 | `once(event, handler)` | event: string, handler: function | void | Listen once |
-| `clear(event)` | event: string | void | Clear listeners |
+| `clear(event)` | event: string | void | Clear listeners for event |
+| `clear()` | - | void | Clear all listeners |
 
-### utils
+### kit.utils
+
 | Function | Parameters | Returns | Description |
 |----------|-----------|---------|-------------|
 | `debounce(fn, delay)` | fn: function, delay: number | function | Debounced function |
@@ -735,3 +1050,6 @@ this.$storage.set('authToken', token, 60 * 60 * 1000);
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+## 📝 License
+
+MIT License - see LICENSE file for details.
