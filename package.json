@@ -1,21 +1,21 @@
 {
-  "name": "@zogjs/kit",
-  "version": "0.3.0",
-  "description": "Essential utilities plugin for Zog.js - HTTP client, storage helpers, DOM directives, event bus, and performance utilities",
+  "name": "@zogjs/http",
+  "version": "0.4.8",
+  "description": "Powerful HTTP client plugin for Zog.js - Full-featured request library with interceptors, file upload/download progress tracking, and reactive state management",
   "type": "module",
-  "main": "dist/zog-kit.umd.js",
-  "module": "dist/zog-kit.es.js",
+  "main": "dist/zog-http.es.js",
+  "module": "dist/zog-http.es.js",
   "exports": {
-    ".": {
-      "import": "./dist/zog-kit.es.js",
-      "require": "./dist/zog-kit.umd.js"
-    }
+    ".": "./dist/zog-http.es.js"
   },
   "files": [
     "dist",
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -24,33 +24,31 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/zogjs/zog-kit.git"
+    "url": "https://github.com/zogjs/zog-http.git"
   },
-  "homepage": "https://github.com/zogjs/zog-kit#readme",
+  "homepage": "https://github.com/zogjs/zog-http#readme",
   "bugs": {
-    "url": "https://github.com/zogjs/zog-kit/issues"
+    "url": "https://github.com/zogjs/zog-http/issues"
   },
   "author": "ZogJS Team",
   "license": "MIT",
   "keywords": [
     "zogjs",
     "zog",
-    "zog-kit",
+    "zog-http",
     "plugin",
     "utilities",
     "http-client",
-    "storage",
-    "event-bus",
-    "directives",
     "performance",
     "reactive",
     "frontend",
     "javascript"
   ],
   "peerDependencies": {
-    "zog": "^0.3.0"
+    "zogjs": "^0.4.8"
   },
   "devDependencies": {
+    "terser": "^5.44.1",
     "vite": "^7.0.0"
   },
   "engines": {
