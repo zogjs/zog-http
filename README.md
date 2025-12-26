@@ -23,7 +23,7 @@ A powerful, production-ready HTTP client plugin for Zog.js with full support for
 ```html
 <script type="module">
 import { createApp } from 'zogjs';
-import { ZogHttpPlugin } from '@zogjs/http';
+import { ZogHttpPlugin, $http } from '@zogjs/http';
 
 createApp(() => ({
   // your data
@@ -52,14 +52,14 @@ createApp(() => ({
 
 <script type="module">
 import { createApp, reactive } from './zog.js';
-import { ZogHttpPlugin } from './zog-http.js';
+import { ZogHttpPlugin, $http } from './zog-http.js';
 
 createApp(() => {
   const users = reactive([]);
   
   async function loadUsers() {
     try {
-      const response = await this.$http.get('/users');
+      const response = await $http.get('/users');
       users.splice(0, users.length, ...response.data);
     } catch (error) {
       console.error('Failed to load users:', error);
