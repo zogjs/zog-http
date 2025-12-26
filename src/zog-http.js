@@ -1018,13 +1018,16 @@ class ZogHttpClient {
   }
 }
 
+export let $http = null;
+
+
 /**
  * ZogHttp Plugin for Zog.js
  * 
  * Usage:
  * ```javascript
  * import { createApp } from './zog.js';
- * import { ZogHttpPlugin } from './zog-http.js';
+ * import { ZogHttpPlugin, $http} from './zog-http.js';
  * 
  * createApp(() => ({
  *   // your reactive data
@@ -1055,6 +1058,7 @@ export const ZogHttpPlugin = {
     // Create HTTP client instance
     const http = new ZogHttpClient(options, reactive, ref);
     
+    $http = http;
     // Store reference for global access
     ZogHttpPlugin._instance = http;
     
