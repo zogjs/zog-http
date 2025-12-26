@@ -58,7 +58,7 @@
 
   <script type="module">
     import { createApp, ref, reactive } from '../node_modules/zogjs/dist/0.4.8/zog.js';
-    import { ZogHttpPlugin } from './../src/zog-http.js';
+    import { ZogHttpPlugin, $http } from './../src/zog-http.js';
     
     createApp(() => {
       const users = reactive([]);
@@ -70,7 +70,7 @@
       async function fetchUsers() {
         try {
           error.value = '';
-          const res = await this.$http.get('/users', { params: { _limit: 5 } });
+          const res = await $http.get('/users', { params: { _limit: 5 } });
           users.splice(0, users.length, ...res.data);
         } catch (e) { error.value = e.message; }
       }
